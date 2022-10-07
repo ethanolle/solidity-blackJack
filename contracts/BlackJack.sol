@@ -12,7 +12,7 @@ contract BlackJack {
         uint256 createdAt;
         uint256 updatedAt;
         bool playerWon;
-        uint256[] bets;
+        uint256 bets;
     }
 
     address payable public owner;
@@ -54,6 +54,10 @@ contract BlackJack {
         return games[msg.sender];
     }
 
+    function getCards() public view returns (uint256[] memory, uint256[] memory) {
+        return (games[msg.sender].playerHand, games[msg.sender].dealerHand);
+    }
+
     function startGame( uint256 _initialBet) public returns (uint,uint){
         address _player = msg.sender;
         require(balances[_player] >= 0.1 ether, "You need to have at least 0.1 ether to play");
@@ -69,9 +73,8 @@ contract BlackJack {
             createdAt: block.timestamp,
             updatedAt: block.timestamp,
             playerWon: false,
-            bets: new uint256[](0)
+            bets: _initialBet
         });
-        games[_player].bets.push(_initialBet);
         games[_player].playerHand.push(randomNumber(0, 52));
         games[_player].dealerHand.push(randomNumber(0, 52));
         return (games[_player].playerHand[0], games[_player].dealerHand[0]);
@@ -91,7 +94,7 @@ contract BlackJack {
         address _player = msg.sender;
         require(games[_player].createdAt > 0, "You need to start a game first");
         require(games[_player].createdAt + 24 hours > block.timestamp, "Game has expired");
-        while (getHandValue(games[_player].dealerHand) < 17) {
+         while (getHandValue(games[_player].dealerHand) < 17) {
             games[_player].dealerHand.push(randomNumber(0, 52));
         }
         uint256 _playerHandValue = getHandValue(games[_player].playerHand);
@@ -111,9 +114,7 @@ contract BlackJack {
         }
         if (games[_player].playerWon) {
             uint256 _totalBet = 0;
-            for (uint256 i = 0; i < games[_player].bets.length; i++) {
-                _totalBet += games[_player].bets[i];
-            }
+            _totalBet = games[_player].bets * 2;
             balances[_player] += _totalBet * 2;
         }
         return (games[_player].playerHand, games[_player].dealerHand, games[_player].playerWon);
@@ -136,8 +137,6 @@ contract BlackJack {
         }
         return _handValue;
     }
-
-
 
     function randomNumber(uint256 _min, uint256 _max) internal view returns (uint256) {
         return uint256(keccak256(abi.encodePacked(block.timestamp))) % _max + _min;
